@@ -159,6 +159,98 @@ class PDFDocument:
             print(f"❌ 创建临时目录失败: {e}")
             self.temp_dir = None
             
+    def refresh_temp_files(self):
+        """刷新临时文件列表"""
+        if not self.temp_dir or not os.path.exists(self.temp_dir):
+            self.temp_files = []
+            return
+            
+        try:
+            # 扫描临时目录中的所有图片文件
+            temp_files = []
+            for file_name in os.listdir(self.temp_dir):
+                if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp')):
+                    file_path = os.path.join(self.temp_dir, file_name)
+                    if os.path.isfile(file_path):
+                        temp_files.append(file_path)
+            
+            # 按修改时间排序
+            temp_files.sort(key=lambda x: os.path.getmtime(x))
+            self.temp_files = temp_files
+            
+            print(f"🔄 已刷新临时文件列表，共 {len(self.temp_files)} 个文件")
+            
+        except Exception as e:
+            print(f"❌ 刷新临时文件列表失败: {e}")
+            self.temp_files = []
+    
+    def delete_selected_files(self, selected_files):
+        """删除选中的临时文件"""
+        deleted_count = 0
+        
+        for file_path in selected_files:
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    deleted_count += 1
+                    print(f"🗑️ 已删除: {os.path.basename(file_path)}")
+                
+                # 从临时文件列表中移除
+                if file_path in self.temp_files:
+                    self.temp_files.remove(file_path)
+                
+            except Exception as e:
+                print(f"❌ 删除文件失败 {file_path}: {e}")
+        
+        print(f"🗑️ 删除选中文件完成，已删除 {deleted_count} 个文件")
+        return deleted_count
+    
+    def clear_temp_files(self):
+        """清理所有临时文件"""
+        deleted_count = 0
+        
+        for file_path in self.temp_files[:]:  # 使用切片复制列表
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    deleted_count += 1
+                    print(f"🗑️ 已删除: {os.path.basename(file_path)}")
+                
+                # 从列表中移除
+                self.temp_files.remove(file_path)
+                
+            except Exception as e:
+                print(f"❌ 删除文件失败 {file_path}: {e}")
+        
+        print(f"🧹 清空完成，已删除 {deleted_count} 个临时文件")
+        return deleted_count
+    
+    def get_temp_files_info(self):
+        """获取临时文件信息"""
+        if not self.temp_files:
+            return "暂无临时文件"
+            
+        total_size = 0
+        valid_files = 0
+        
+        for file_path in self.temp_files:
+            if os.path.exists(file_path):
+                try:
+                    total_size += os.path.getsize(file_path)
+                    valid_files += 1
+                except:
+                    pass
+        
+        # 转换文件大小为可读格式
+        if total_size < 1024:
+            size_str = f"{total_size} B"
+        elif total_size < 1024 * 1024:
+            size_str = f"{total_size / 1024:.1f} KB"
+        else:
+            size_str = f"{total_size / (1024 * 1024):.1f} MB"
+            
+        return f"{valid_files} 个文件，共 {size_str}"
+    
     def cleanup(self):
         """清理资源"""
         if self.doc:

@@ -5,7 +5,7 @@
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                             QLabel, QLineEdit, QTextEdit, QListWidget, 
-                            QListWidgetItem, QGroupBox, QProgressBar)
+                            QListWidgetItem, QGroupBox, QProgressBar, QMenu, QAction)
 from PyQt5.QtCore import Qt, pyqtSignal
 import os
 
@@ -18,6 +18,10 @@ class ControlPanel(QWidget):
     select_pages_requested = pyqtSignal()
     save_images_requested = pyqtSignal()
     clear_selection_requested = pyqtSignal()
+    refresh_temp_files_requested = pyqtSignal()
+    clear_temp_files_requested = pyqtSignal()
+    delete_selected_files_requested = pyqtSignal(list)  # 删除选中的文件
+    open_temp_folder_requested = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -122,13 +126,78 @@ class ControlPanel(QWidget):
         # 临时文件列表
         self.temp_files_list = QListWidget()
         self.temp_files_list.setMaximumHeight(100)
+        self.temp_files_list.setSelectionMode(QListWidget.ExtendedSelection)  # 支持多选
+        self.temp_files_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.temp_files_list.customContextMenuRequested.connect(self.show_context_menu)
         temp_layout.addWidget(self.temp_files_list)
         
         self.temp_files_label = QLabel("临时文件: 0 个")
         temp_layout.addWidget(self.temp_files_label)
         
+        # 临时文件管理按钮
+        temp_buttons_layout = QHBoxLayout()
+        
+        self.refresh_temp_button = QPushButton("刷新")
+        self.refresh_temp_button.clicked.connect(self.refresh_temp_files_requested.emit)
+        temp_buttons_layout.addWidget(self.refresh_temp_button)
+        
+        self.delete_selected_button = QPushButton("删除选中")
+        self.delete_selected_button.clicked.connect(self.delete_selected_files)
+        temp_buttons_layout.addWidget(self.delete_selected_button)
+        
+        self.clear_temp_button = QPushButton("清空全部")
+        self.clear_temp_button.clicked.connect(self.clear_temp_files_requested.emit)
+        temp_buttons_layout.addWidget(self.clear_temp_button)
+        
+        temp_layout.addLayout(temp_buttons_layout)
+        
+        # 第二行按钮
+        temp_buttons_layout2 = QHBoxLayout()
+        
+        self.open_folder_button = QPushButton("打开文件夹")
+        self.open_folder_button.clicked.connect(self.open_temp_folder_requested.emit)
+        temp_buttons_layout2.addWidget(self.open_folder_button)
+        
+        temp_buttons_layout2.addStretch()
+        temp_layout.addLayout(temp_buttons_layout2)
+        
         layout.addWidget(temp_group)
         layout.addStretch()
+    
+    def show_context_menu(self, position):
+        """显示右键菜单"""
+        if self.temp_files_list.itemAt(position) is None:
+            return
+            
+        context_menu = QMenu(self)
+        
+        # 删除选中文件
+        delete_action = QAction("删除选中文件", self)
+        delete_action.triggered.connect(self.delete_selected_files)
+        context_menu.addAction(delete_action)
+        
+        # 打开文件位置
+        open_location_action = QAction("打开文件位置", self)
+        open_location_action.triggered.connect(self.open_temp_folder_requested.emit)
+        context_menu.addAction(open_location_action)
+        
+        context_menu.exec_(self.temp_files_list.mapToGlobal(position))
+    
+    def delete_selected_files(self):
+        """删除选中的文件"""
+        selected_items = self.temp_files_list.selectedItems()
+        if not selected_items:
+            return
+            
+        # 获取选中文件的路径
+        selected_files = []
+        for item in selected_items:
+            file_path = item.data(Qt.UserRole)
+            if file_path:
+                selected_files.append(file_path)
+        
+        if selected_files:
+            self.delete_selected_files_requested.emit(selected_files)
         
     def get_copy_interval(self):
         """获取复制间隔时间"""
@@ -136,7 +205,13 @@ class ControlPanel(QWidget):
             interval_text = self.interval_input.text().strip()
             if not interval_text:
                 return 4
-            return float(interval_text)
+            interval = float(interval_text)
+            # 限制范围在0.5-60秒之间
+            if interval < 0.5:
+                interval = 0.5
+            elif interval > 60:
+                interval = 60
+            return interval
         except ValueError:
             return 4
             

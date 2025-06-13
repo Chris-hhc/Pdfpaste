@@ -134,6 +134,10 @@ class MainWindow(QMainWindow):
         self.control_panel.select_pages_requested.connect(self.select_pages)
         self.control_panel.save_images_requested.connect(self.save_selected_pages_as_images)
         self.control_panel.clear_selection_requested.connect(self.clear_selection)
+        self.control_panel.refresh_temp_files_requested.connect(self.refresh_temp_files)
+        self.control_panel.clear_temp_files_requested.connect(self.clear_temp_files)
+        self.control_panel.delete_selected_files_requested.connect(self.delete_selected_files)
+        self.control_panel.open_temp_folder_requested.connect(self.open_temp_folder)
         
         # PDF显示区域信号连接
         self.pdf_display.page_selection_changed.connect(self.on_page_selection_changed)
@@ -277,6 +281,76 @@ class MainWindow(QMainWindow):
                 
         except Exception as e:
             QMessageBox.critical(self, "错误", f"保存过程中发生错误: {e}")
+    
+    def refresh_temp_files(self):
+        """刷新临时文件列表"""
+        if not self.pdf_document.temp_dir:
+            QMessageBox.information(self, "提示", "暂无临时目录")
+            return
+            
+        # 重新扫描临时目录
+        self.pdf_document.refresh_temp_files()
+        
+        # 更新显示
+        self.control_panel.update_temp_files(self.pdf_document.temp_files)
+        
+        QMessageBox.information(self, "刷新完成", 
+                              f"已刷新临时文件列表，共 {len(self.pdf_document.temp_files)} 个文件")
+    
+    def delete_selected_files(self, selected_files):
+        """删除选中的临时文件"""
+        if not selected_files:
+            QMessageBox.information(self, "提示", "请先选择要删除的文件")
+            return
+            
+        reply = QMessageBox.question(self, "确认删除", 
+                                   f"确定要删除选中的 {len(selected_files)} 个文件吗？\n"
+                                   "此操作不可撤销！",
+                                   QMessageBox.Yes | QMessageBox.No,
+                                   QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            deleted_count = self.pdf_document.delete_selected_files(selected_files)
+            
+            # 更新显示
+            self.control_panel.update_temp_files(self.pdf_document.temp_files)
+            
+            QMessageBox.information(self, "删除完成", 
+                                  f"已删除 {deleted_count} 个文件")
+    
+    def clear_temp_files(self):
+        """清理所有临时文件"""
+        if not self.pdf_document.temp_files:
+            QMessageBox.information(self, "提示", "暂无临时文件需要清理")
+            return
+            
+        reply = QMessageBox.question(self, "确认清空", 
+                                   f"确定要删除所有 {len(self.pdf_document.temp_files)} 个临时文件吗？\n"
+                                   "此操作不可撤销！",
+                                   QMessageBox.Yes | QMessageBox.No,
+                                   QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            deleted_count = self.pdf_document.clear_temp_files()
+            
+            # 更新显示
+            self.control_panel.update_temp_files(self.pdf_document.temp_files)
+            
+            QMessageBox.information(self, "清空完成", 
+                                  f"已删除 {deleted_count} 个临时文件")
+    
+    def open_temp_folder(self):
+        """打开临时文件夹"""
+        if not self.pdf_document.temp_dir or not os.path.exists(self.pdf_document.temp_dir):
+            QMessageBox.warning(self, "警告", "临时目录不存在")
+            return
+            
+        try:
+            # macOS 使用 open 命令打开文件夹
+            import subprocess
+            subprocess.run(["open", self.pdf_document.temp_dir])
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"无法打开文件夹: {e}")
             
     def closeEvent(self, event):
         """程序关闭时清理资源"""
