@@ -37,14 +37,29 @@
 ## 🚀 快速开始
 
 ### 安装依赖
+
+#### 方法一：使用requirements.txt（推荐）
 ```bash
-pip install PyQt5 PyMuPDF pillow
+pip install -r requirements.txt
+```
+
+#### 方法二：手动安装核心依赖
+```bash
+pip install PyQt5 PyMuPDF Pillow pyobjc-framework-Cocoa pyobjc-framework-Quartz
 ```
 
 ### 运行程序
 ```bash
 python main.py
 ```
+
+### 依赖说明
+- **PyQt5**: GUI界面框架
+- **PyMuPDF**: PDF文档处理
+- **Pillow**: 图像处理和格式转换
+- **pyobjc-framework-Cocoa**: macOS系统集成（剪贴板操作）
+- **pyobjc-framework-Quartz**: macOS键盘监听
+- **pyperclip**: 剪贴板操作备用方案
 
 ## 📖 使用指南
 

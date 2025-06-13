@@ -1,4 +1,17 @@
+# GUI框架
 PyQt5==5.15.10
+
+# PDF处理
 PyMuPDF==1.23.8
-pillow==10.1.0
-pyperclip==1.8.2 
+
+# 图像处理
+Pillow==10.1.0
+
+# 剪贴板操作（备用方案）
+pyperclip==1.8.2
+
+# macOS系统集成
+pyobjc-core>=10.0
+pyobjc-framework-Cocoa>=10.0
+pyobjc-framework-Quartz>=10.0
+pyobjc-framework-ApplicationServices>=10.0 
